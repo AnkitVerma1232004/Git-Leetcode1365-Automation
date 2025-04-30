@@ -4,7 +4,7 @@ int* smallerNumbersThanCurrent(int* nums, int numsSize, int* returnSize) {
     int* res = (int*)malloc(numsSize * sizeof(int));
     
 
-    for (int i = 0; i < numsSize; i++) {
+    for (int i = 0; i < numsSize-1; i++) {
         int count = 0;
         
       
