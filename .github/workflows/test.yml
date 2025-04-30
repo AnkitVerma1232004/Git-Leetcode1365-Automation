@@ -13,6 +13,7 @@ on:
 jobs:
   run-tests:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -26,6 +27,7 @@ jobs:
           if [ -z "$BASE" ] || ! git cat-file -e "$BASE"^{commit}; then
             BASE=$(git rev-parse HEAD~1)
           fi
+          # find any changed files under solutions/
           CHANGED=$(git diff --name-only $BASE $GITHUB_SHA | grep '^solutions/' || true)
           echo "CHANGED_FILES=$CHANGED" >> $GITHUB_ENV
 
@@ -41,14 +43,14 @@ jobs:
           done
           echo "→ Detected LANGUAGE=${{ env.LANGUAGE }}"
 
-      - name: Setup Java (only if needed)
+      - name: Setup Java
         if: env.LANGUAGE == 'JAVA'
         uses: actions/setup-java@v3
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Setup Python (only if needed)
+      - name: Setup Python
         if: env.LANGUAGE == 'PY'
         uses: actions/setup-python@v4
         with:
@@ -81,7 +83,7 @@ jobs:
           set -euo pipefail
           python3 tests/test.py | tee python_test_output.txt
 
-      - name: Upload test results
+      - name: Upload Test Results
         if: always()
         uses: actions/upload-artifact@v4
         with:
