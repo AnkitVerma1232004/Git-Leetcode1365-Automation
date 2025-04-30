@@ -1,53 +1,95 @@
-- name: Determine LANGUAGES
-        run: |
-          LANGUAGES=""
-          for f in ${{ env.CHANGED_FILES }}; do
-            case "$f" in
-              *.c)    LANGUAGES="$LANGUAGES C" ;;
-              *.cpp)  LANGUAGES="$LANGUAGES CPP" ;;
-              *.java) LANGUAGES="$LANGUAGES JAVA" ;;
-              *.py)   LANGUAGES="$LANGUAGES PY" ;;
-            esac
-          done
-          echo "CHANGED_LANGUAGES=$LANGUAGES" >> $GITHUB_ENV
-          echo "→ Detected LANGUAGES=${{ env.CHANGED_LANGUAGES }}"
+name: Auto Test
 
-      - name: Setup Java
-        if: contains(env.CHANGED_LANGUAGES, 'JAVA')
-        uses: actions/setup-java@v3
-        with:
-          java-version: '17'
-          distribution: 'temurin'
+on:
+  push:
+    paths:
+      - 'solutions/**'
+      - 'tests/**'
+  pull_request:
+    paths:
+      - 'solutions/**'
+      - 'tests/**'
 
-      - name: Setup Python
-        if: contains(env.CHANGED_LANGUAGES, 'PY')
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
 
-      - name: Compile & Run C Tests
-        if: contains(env.CHANGED_LANGUAGES, 'C')
-        run: |
-          set -euo pipefail
-          gcc solutions/Solution.c tests/test.c -o test_c
-          ./test_c | tee c_test_output.txt
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
 
-      - name: Compile & Run C++ Tests
-        if: contains(env.CHANGED_LANGUAGES, 'CPP')
-        run: |
-          set -euo pipefail
-          g++ tests/test.cpp -o test_cpp
-          ./test_cpp | tee cpp_test_output.txt
+      - name: Detect changed solution file
+        id: detect
+        run: |
+          BASE=${{ github.event.before }}
+          if [ -z "$BASE" ] || ! git cat-file -e "$BASE"^{commit}; then
+            BASE=$(git rev-parse HEAD~1)
+          fi
+          # find any changed files under solutions/
+          CHANGED=$(git diff --name-only $BASE $GITHUB_SHA | grep '^solutions/' || true)
+          echo "CHANGED_FILES=$CHANGED" >> $GITHUB_ENV
 
-      - name: Compile & Run Java Tests
-        if: contains(env.CHANGED_LANGUAGES, 'JAVA')
-        run: |
-          set -euo pipefail
-          javac solutions/Solution.java tests/Test.java
-          java -cp . tests.Test | tee java_test_output.txt
+      - name: Determine LANGUAGE
+        run: |
+          for f in ${{ env.CHANGED_FILES }}; do
+            case "$f" in
+              *.c)    echo "LANGUAGE=C"    >> $GITHUB_ENV && break ;;
+              *.cpp)  echo "LANGUAGE=CPP"  >> $GITHUB_ENV && break ;;
+              *.java) echo "LANGUAGE=JAVA" >> $GITHUB_ENV && break ;;
+              *.py)   echo "LANGUAGE=PY"   >> $GITHUB_ENV && break ;;
+            esac
+          done
+          echo "→ Detected LANGUAGE=${{ env.LANGUAGE }}"
 
-      - name: Run Python Tests
-        if: contains(env.CHANGED_LANGUAGES, 'PY')
-        run: |
-          set -euo pipefail
-          python3 tests/test.py | tee python_test_output.txt
+      - name: Setup Java
+        if: env.LANGUAGE == 'JAVA'
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Python
+        if: env.LANGUAGE == 'PY'
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Compile & Run C Tests
+        if: env.LANGUAGE == 'C'
+        run: |
+          set -euo pipefail
+          gcc solutions/Solution.c tests/test.c -o test_c
+          ./test_c | tee c_test_output.txt
+
+      - name: Compile & Run C++ Tests
+        if: env.LANGUAGE == 'CPP'
+        run: |
+          set -euo pipefail
+          g++ tests/test.cpp -o test_cpp
+          ./test_cpp | tee cpp_test_output.txt
+
+      - name: Compile & Run Java Tests
+        if: env.LANGUAGE == 'JAVA'
+        run: |
+          set -euo pipefail
+          javac solutions/Solution.java tests/Test.java
+          java -cp . tests.Test | tee java_test_output.txt
+
+      - name: Run Python Tests
+        if: env.LANGUAGE == 'PY'
+        run: |
+          set -euo pipefail
+          python3 tests/test.py | tee python_test_output.txt
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            c_test_output.txt
+            cpp_test_output.txt
+            java_test_output.txt
+            python_test_output.txt
