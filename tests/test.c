@@ -2,7 +2,9 @@
 #include <stdlib.h>
 #include <limits.h>
 #include <time.h>
-#include "../solutions/Solution.c"  // make sure filename matches exactly
+
+// just declare the function here — do NOT include Solution.c
+int* smallerNumbersThanCurrent(int* nums, int numsSize, int* returnSize);
 
 static int any_failed = 0;
 
@@ -46,8 +48,6 @@ int main() {
 
     int t5[] = {3,2,1},      e5[] = {2,1,0};
     testCase(t5,3,e5);
-
-    // …add more here as needed…
 
     return any_failed ? EXIT_FAILURE : EXIT_SUCCESS;
 }
