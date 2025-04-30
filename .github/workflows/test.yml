@@ -56,6 +56,36 @@ jobs:
             exit 1
           fi
 
+      - name: Compile C Code
+        if: contains(github.event.head_commit.message, '.c')
+        run: |
+          gcc solutions/solution.c tests/test.c -o test_c
+
+      - name: Run C Tests
+        if: contains(github.event.head_commit.message, '.c')
+        run: |
+          ./test_c > c_test_output.txt
+          cat c_test_output.txt
+          if grep -q "failed" c_test_output.txt; then
+            echo "One or more C test cases failed."
+            exit 1
+          fi
+
+      - name: Compile C++ Code
+        if: contains(github.event.head_commit.message, '.cpp')
+        run: |
+          g++ solutions/solution.cpp tests/test.cpp -o test_cpp
+
+      - name: Run C++ Tests
+        if: contains(github.event.head_commit.message, '.cpp')
+        run: |
+          ./test_cpp > cpp_test_output.txt
+          cat cpp_test_output.txt
+          if grep -q "failed" cpp_test_output.txt; then
+            echo "One or more C++ test cases failed."
+            exit 1
+          fi
+
       - name: Upload Test Results
         if: always()
         uses: actions/upload-artifact@v4
