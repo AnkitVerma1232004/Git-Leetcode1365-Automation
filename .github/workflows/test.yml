@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v3
         with:
           fetch-depth: 2
@@ -27,26 +27,22 @@ jobs:
           if [ -z "$BASE" ] || ! git cat-file -e "$BASE"^{commit}; then
             BASE=$(git rev-parse HEAD~1)
           fi
-
-          # list changed files under solutions/
           CHANGED=$(git diff --name-only $BASE $GITHUB_SHA | grep '^solutions/' || true)
-          echo "Changed solution files: $CHANGED"
           echo "CHANGED_FILES=$CHANGED" >> $GITHUB_ENV
 
       - name: Determine LANGUAGE
-        id: lang
         run: |
           for f in ${{ env.CHANGED_FILES }}; do
             case "$f" in
-              *.c)    echo "LANGUAGE=C"      >> $GITHUB_ENV && break ;;
-              *.cpp)  echo "LANGUAGE=CPP"    >> $GITHUB_ENV && break ;;
-              *.java) echo "LANGUAGE=JAVA"   >> $GITHUB_ENV && break ;;
-              *.py)   echo "LANGUAGE=PYTHON" >> $GITHUB_ENV && break ;;
+              *.c)    echo "LANGUAGE=C"    >> $GITHUB_ENV && break ;;
+              *.cpp)  echo "LANGUAGE=CPP"  >> $GITHUB_ENV && break ;;
+              *.java) echo "LANGUAGE=JAVA" >> $GITHUB_ENV && break ;;
+              *.py)   echo "LANGUAGE=PY"   >> $GITHUB_ENV && break ;;
             esac
           done
-          echo "→ Detected LANGUAGE=${{ env.LANGUAGE }}"
+          echo "Detected $LANGUAGE"
 
-      - name: Install all runtimes
+      - name: Install runtimes
         run: |
           sudo apt update
           sudo apt install -y gcc g++ python3 openjdk-17-jdk
@@ -56,15 +52,13 @@ jobs:
         run: |
           set -euo pipefail
           gcc solutions/Solution.c tests/test.c -o test_c
-          echo "→ Running C tests..."
           ./test_c | tee c_test_output.txt
 
       - name: Compile & Run C++ Tests
         if: env.LANGUAGE == 'CPP'
         run: |
           set -euo pipefail
-          g++ solutions/Solution.cpp tests/test.cpp -o test_cpp
-          echo "→ Running C++ tests..."
+          g++ tests/test.cpp -o test_cpp
           ./test_cpp | tee cpp_test_output.txt
 
       - name: Compile & Run Java Tests
@@ -72,17 +66,15 @@ jobs:
         run: |
           set -euo pipefail
           javac solutions/Solution.java tests/Test.java
-          echo "→ Running Java tests..."
           java -cp . tests.Test | tee java_test_output.txt
 
       - name: Run Python Tests
-        if: env.LANGUAGE == 'PYTHON'
+        if: env.LANGUAGE == 'PY'
         run: |
           set -euo pipefail
-          echo "→ Running Python tests..."
           python3 tests/test.py | tee python_test_output.txt
 
-      - name: Upload Test Results
+      - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
