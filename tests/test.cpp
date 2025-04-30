@@ -1,7 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <ctime>
-#include "../solutions/Solution.cpp"  // pulls in your Solution::smallerNumbersThanCurrent
+#include "../solutions/Solution.cpp"
 
 using namespace std;
 
@@ -17,9 +17,9 @@ void testCase(const vector<int>& nums, const vector<int>& expected) {
     } else {
         cout << "FAIL (" << (end - start) << "ms)\n";
         cout << "  Expected: ";
-        for (int v: expected) cout << v << " ";
+        for (int v : expected) cout << v << " ";
         cout << "\n  Got:      ";
-        for (int v: out)      cout << v << " ";
+        for (int v : out)      cout << v << " ";
         cout << "\n";
         any_failed = true;
     }
