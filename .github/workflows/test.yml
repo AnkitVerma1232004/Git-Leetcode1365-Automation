@@ -60,14 +60,14 @@ jobs:
         if: env.LANGUAGE == 'C'
         run: |
           set -euo pipefail
-          gcc solutions/Solution.c tests/test.c -o test_c
-          ./test_c | tee c_test_output.txt
+          gcc -g -Wall -Wextra -Werror solutions/Solution.c tests/test.c -o test_c
+          valgrind --leak-check=full --error-exitcode=1 ./test_c | tee c_test_output.txt
 
       - name: Compile & Run C++ Tests
         if: env.LANGUAGE == 'CPP'
         run: |
           set -euo pipefail
-          g++ tests/test.cpp -o test_cpp
+          g++ -Wall -Wextra -Werror tests/test.cpp -o test_cpp
           ./test_cpp | tee cpp_test_output.txt
 
       - name: Compile & Run Java Tests
