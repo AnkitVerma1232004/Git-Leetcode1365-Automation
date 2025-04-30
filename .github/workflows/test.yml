@@ -61,4 +61,33 @@ jobs:
           gcc solutions/Solution.c tests/test.c -o test_c
           ./test_c | tee c_test_output.txt
 
-      - name:
+      - name: Compile & Run C++ Tests
+        if: env.LANGUAGE == 'CPP'
+        run: |
+          set -euo pipefail
+          g++ tests/test.cpp -o test_cpp
+          ./test_cpp | tee cpp_test_output.txt
+
+      - name: Compile & Run Java Tests
+        if: env.LANGUAGE == 'JAVA'
+        run: |
+          set -euo pipefail
+          javac solutions/Solution.java tests/Test.java
+          java -cp . tests.Test | tee java_test_output.txt
+
+      - name: Run Python Tests
+        if: env.LANGUAGE == 'PY'
+        run: |
+          set -euo pipefail
+          python3 tests/test.py | tee python_test_output.txt
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            c_test_output.txt
+            cpp_test_output.txt
+            java_test_output.txt
+            python_test_output.txt
