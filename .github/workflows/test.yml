@@ -19,7 +19,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Set up Java
-        if: contains(github.event.head_commit.message, '.java') || contains(github.event.head_commit.message, 'Test.java')
+        if: contains(github.event.head_commit.message, '.java')
         uses: actions/setup-java@v3
         with:
           java-version: '17'
@@ -59,7 +59,7 @@ jobs:
       - name: Compile C Code
         if: contains(github.event.head_commit.message, '.c')
         run: |
-          gcc solutions/solution.c tests/test.c -o test_c
+          gcc solutions/Solution.c tests/test.c -o test_c
 
       - name: Run C Tests
         if: contains(github.event.head_commit.message, '.c')
@@ -74,7 +74,7 @@ jobs:
       - name: Compile C++ Code
         if: contains(github.event.head_commit.message, '.cpp')
         run: |
-          g++ solutions/solution.cpp tests/test.cpp -o test_cpp
+          g++ solutions/Solution.cpp tests/test.cpp -o test_cpp
 
       - name: Run C++ Tests
         if: contains(github.event.head_commit.message, '.cpp')
