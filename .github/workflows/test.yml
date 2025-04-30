@@ -15,80 +15,59 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2  # Ensure previous commit is available
+          fetch-depth: 2
 
-      - name: Detect Changed Files
-        id: changed-files
+      - name: Detect Changed Solution File
+        id: detect-file
         run: |
-          BEFORE_COMMIT="${{ github.event.before }}"
-          if [ -z "$BEFORE_COMMIT" ] || ! git cat-file -e "$BEFORE_COMMIT"^{commit}; then
-            BEFORE_COMMIT=$(git rev-parse HEAD~1)  # Use last commit as fallback
-          fi
-          
-          CHANGED_FILES=$(git diff --name-only "$BEFORE_COMMIT" HEAD | grep '^solutions/')
-          echo "Detected changed files: $CHANGED_FILES"
-          
-          if [ -z "$CHANGED_FILES" ]; then
-            echo "No file changes detected. Exiting..."
+          FILE=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^solutions/' | head -n 1)
+          echo "Changed file: $FILE"
+          echo "CHANGED_FILE=$FILE" >> $GITHUB_ENV
+
+          EXT="${FILE##*.}"
+          if [[ "$EXT" == "c" ]]; then
+            echo "LANGUAGE=C" >> $GITHUB_ENV
+          elif [[ "$EXT" == "cpp" ]]; then
+            echo "LANGUAGE=C++" >> $GITHUB_ENV
+          elif [[ "$EXT" == "py" ]]; then
+            echo "LANGUAGE=Python" >> $GITHUB_ENV
+          elif [[ "$EXT" == "java" ]]; then
+            echo "LANGUAGE=Java" >> $GITHUB_ENV
+          else
+            echo "Unsupported language: $EXT"
             exit 1
           fi
 
-          echo "CHANGED_FILES=$(echo "$CHANGED_FILES" | tr '\n' ' ')" >> $GITHUB_ENV
-
-      - name: Determine File Type
-        id: determine-file
+      - name: Install Dependencies
         run: |
-          for file in $CHANGED_FILES; do
-            case "$file" in
-              *.c) echo "LANGUAGE=C" >> $GITHUB_ENV ;;
-              *.cpp) echo "LANGUAGE=C++" >> $GITHUB_ENV ;;
-              *.py) echo "LANGUAGE=Python" >> $GITHUB_ENV ;;
-              *.java) echo "LANGUAGE=Java" >> $GITHUB_ENV ;;
-            esac
-          done
+          sudo apt update
+          if [[ "$LANGUAGE" == "C" ]]; then sudo apt install -y gcc;
+          elif [[ "$LANGUAGE" == "C++" ]]; then sudo apt install -y g++;
+          elif [[ "$LANGUAGE" == "Java" ]]; then sudo apt install -y openjdk-17-jdk;
+          elif [[ "$LANGUAGE" == "Python" ]]; then sudo apt install -y python3;
+          fi
 
-      - name: Install C Dependencies
-        if: env.LANGUAGE == 'C'
-        run: sudo apt update && sudo apt install -y gcc
-
-      - name: Install C++ Dependencies
-        if: env.LANGUAGE == 'C++'
-        run: sudo apt update && sudo apt install -y g++
-
-      - name: Install Python Dependencies
-        if: env.LANGUAGE == 'Python'
-        run: sudo apt update && sudo apt install -y python3
-
-      - name: Install Java Dependencies
-        if: env.LANGUAGE == 'Java'
-        run: sudo apt update && sudo apt install -y openjdk-17-jdk
-
-      - name: Compile and Run C Tests
+      - name: Run C Test
         if: env.LANGUAGE == 'C'
         run: |
-          gcc tests/test.c -o test_runner
-          echo "Running C Test Cases..."
-          ./test_runner | tee test_results.log
+          gcc tests/test.c -o runner
+          ./runner
 
-      - name: Compile and Run C++ Tests
+      - name: Run C++ Test
         if: env.LANGUAGE == 'C++'
         run: |
-          g++ tests/test.cpp -o test_runner_cpp
-          echo "Running C++ Test Cases..."
-          ./test_runner_cpp | tee test_results.log
+          g++ tests/test.cpp -o runner
+          ./runner
 
-      - name: Run Python Tests
+      - name: Run Python Test
         if: env.LANGUAGE == 'Python'
-        run: |
-          echo "Running Python Test Cases..."
-          python3 tests/test.py | tee test_results.log
+        run: python3 tests/test.py
 
-      - name: Compile and Run Java Tests
+      - name: Run Java Test
         if: env.LANGUAGE == 'Java'
         run: |
           javac tests/Test.java
-          echo "Running Java Test Cases..."
-          java -cp . tests.Test | tee test_results.log
+          java -cp tests Test
 
       - name: Upload Test Results
         if: always()
