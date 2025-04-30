@@ -1,77 +1,65 @@
-name: Run Code Tests
+name: Auto Test
 
 on:
   push:
     paths:
-      - "solutions/**"
+      - 'solutions/**'
+      - 'tests/**'
   pull_request:
     paths:
-      - "tests/**"
+      - 'solutions/**'
+      - 'tests/**'
 
 jobs:
-  run-tests:
+  detect-and-test:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Java
+        if: contains(github.event.head_commit.message, '.java') || contains(github.event.head_commit.message, 'Test.java')
+        uses: actions/setup-java@v3
         with:
-          fetch-depth: 2
+          java-version: '17'
+          distribution: 'temurin'
 
-      - name: Detect Changed Solution File
-        id: detect-file
+      - name: Set up Python
+        if: contains(github.event.head_commit.message, '.py')
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Run Python Tests
+        if: contains(github.event.head_commit.message, '.py')
         run: |
-          FILE=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^solutions/' | head -n 1)
-          echo "Changed file: $FILE"
-          echo "CHANGED_FILE=$FILE" >> $GITHUB_ENV
-
-          EXT="${FILE##*.}"
-          if [[ "$EXT" == "c" ]]; then
-            echo "LANGUAGE=C" >> $GITHUB_ENV
-          elif [[ "$EXT" == "cpp" ]]; then
-            echo "LANGUAGE=C++" >> $GITHUB_ENV
-          elif [[ "$EXT" == "py" ]]; then
-            echo "LANGUAGE=Python" >> $GITHUB_ENV
-          elif [[ "$EXT" == "java" ]]; then
-            echo "LANGUAGE=Java" >> $GITHUB_ENV
-          else
-            echo "Unsupported language: $EXT"
+          python tests/test.py > python_test_output.txt
+          cat python_test_output.txt
+          if grep -q "failed" python_test_output.txt; then
+            echo "One or more Python test cases failed."
             exit 1
           fi
 
-      - name: Install Dependencies
+      - name: Compile Java Code
+        if: contains(github.event.head_commit.message, '.java')
         run: |
-          sudo apt update
-          if [[ "$LANGUAGE" == "C" ]]; then sudo apt install -y gcc;
-          elif [[ "$LANGUAGE" == "C++" ]]; then sudo apt install -y g++;
-          elif [[ "$LANGUAGE" == "Java" ]]; then sudo apt install -y openjdk-17-jdk;
-          elif [[ "$LANGUAGE" == "Python" ]]; then sudo apt install -y python3;
+          javac solutions/Solution.java tests/Test.java
+
+      - name: Run Java Tests
+        if: contains(github.event.head_commit.message, '.java')
+        run: |
+          java -cp . tests.Test > java_test_output.txt
+          cat java_test_output.txt
+          if grep -q "failed" java_test_output.txt; then
+            echo "One or more Java test cases failed."
+            exit 1
           fi
-
-      - name: Run C Test
-        if: env.LANGUAGE == 'C'
-        run: |
-          gcc tests/test.c -o runner
-          ./runner
-
-      - name: Run C++ Test
-        if: env.LANGUAGE == 'C++'
-        run: |
-          g++ tests/test.cpp -o runner
-          ./runner
-
-      - name: Run Python Test
-        if: env.LANGUAGE == 'Python'
-        run: python3 tests/test.py
-
-      - name: Run Java Test
-        if: env.LANGUAGE == 'Java'
-        run: |
-          javac tests/Test.java
-          java -cp tests Test
 
       - name: Upload Test Results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-results
-          path: test_results.log
+          path: |
+            *.txt
