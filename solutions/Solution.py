@@ -1,8 +1,5 @@
-from typing import List
-__package__ = "solutions"  # Ensure the package is set correctly
-
 class Solution:
-    def smallerNumbersThanCurrent(self, nums: List[int]) -> List[int]:
+    def smallerNumbersThanCurrent(self, nums):
         res = []
         for i in range(len(nums)):
             count = 0
