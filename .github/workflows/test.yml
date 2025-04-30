@@ -2,97 +2,138 @@ name: Run Code Tests
 
 on:
   push:
-    paths:
-      - "solutions/**"
-      - "tests/**"
+    branches:
+      - main
   pull_request:
-    paths:
-      - "solutions/**"
-      - "tests/**"
+    branches:
+      - main
 
 jobs:
   run-tests:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
 
-      - name: Detect Changed Solution Files
-        id: detect
+      - name: Detect Changed Files
+        id: changed-files
+        uses: tj-actions/changed-files@v44
+
+      - name: Check for 'return' keyword in solution files
+        id: check-return
         run: |
-          BASE="${{ github.event.before }}"
-          # if BEFORE isn’t valid (e.g. first commit), fall back to HEAD~1
-          if [ -z "$BASE" ] || ! git cat-file -e "$BASE"^{commit}; then
-            BASE=$(git rev-parse HEAD~1)
+          echo "Checking for 'return' keyword in solution files..."
+          CHANGED_FILES="${{ steps.changed-files.outputs.all_changed_files }}"
+          SOLUTION_WITHOUT_RETURN=0
+          for FILE in $CHANGED_FILES; do
+            if [[ "$FILE" =~ ^solutions/.*\.(c|cpp|py|java)$ ]]; then
+              echo "Checking file: $FILE"
+              if [[ "$FILE" == *.py ]]; then
+                CODE_LINES=$(grep -vE '^\s*#' "$FILE")
+              else
+                CODE_LINES=$(grep -vE '^\s*//' "$FILE")
+              fi
+              if ! echo "$CODE_LINES" | grep -q "\breturn\b"; then
+                echo "❌ The file $FILE does not contain a non-commented 'return' statement."
+                SOLUTION_WITHOUT_RETURN=1
+              else
+                echo "✅ The file $FILE contains a non-commented 'return' statement."
+              fi
+            fi
+          done
+          if [[ $SOLUTION_WITHOUT_RETURN -eq 1 ]]; then
+            echo "❌ Skipping further steps as no non-commented 'return' statement was found in the solution code."
+            exit 1
           fi
 
-          # grab only changes under solutions/
-          CHANGED=$(git diff --name-only "$BASE" HEAD | grep '^solutions/')
-          echo "Changed solution files:"
-          echo "$CHANGED"
-          
-          if [ -z "$CHANGED" ]; then
-            echo "No solution changes detected; skipping tests."
-            exit 0
-          fi
-
-          # expose for next step
-          echo "changed_files<<EOF" >> $GITHUB_OUTPUT
-          echo "$CHANGED"    >> $GITHUB_OUTPUT
-          echo "EOF"        >> $GITHUB_OUTPUT
-
-      - name: Determine LANGUAGE
+      - name: Determine Changed Solution File
+        id: detect-language
         run: |
-          for f in ${{ steps.detect.outputs.changed_files }}; do
-            case "$f" in
-              *.c)    echo "LANGUAGE=C"      >> $GITHUB_ENV && break ;;
-              *.cpp)  echo "LANGUAGE=C++"    >> $GITHUB_ENV && break ;;
-              *.py)   echo "LANGUAGE=Python" >> $GITHUB_ENV && break ;;
-              *.java) echo "LANGUAGE=Java"   >> $GITHUB_ENV && break ;;
+          echo "Detecting changed solution files..."
+          CHANGED_FILES="${{ steps.changed-files.outputs.all_changed_files }}"
+          RUN_C=0
+          RUN_CPP=0
+          RUN_PYTHON=0
+          RUN_JAVA=0
+          COUNT=0
+          for FILE in $CHANGED_FILES; do
+            case "$FILE" in
+              solutions/*.c) RUN_C=1; COUNT=$((COUNT+1)) ;;
+              solutions/*.cpp) RUN_CPP=1; COUNT=$((COUNT+1)) ;;
+              solutions/*.py) RUN_PYTHON=1; COUNT=$((COUNT+1)) ;;
+              solutions/*.java) RUN_JAVA=1; COUNT=$((COUNT+1)) ;;
             esac
           done
+          echo "RUN_C=$RUN_C" >> $GITHUB_ENV
+          echo "RUN_CPP=$RUN_CPP" >> $GITHUB_ENV
+          echo "RUN_PYTHON=$RUN_PYTHON" >> $GITHUB_ENV
+          echo "RUN_JAVA=$RUN_JAVA" >> $GITHUB_ENV
+          echo "SOLUTION_COUNT=$COUNT" >> $GITHUB_ENV
 
-      - name: Install All Runtimes
+      - name: Stop if multiple solution files changed
+        if: env.SOLUTION_COUNT != '1'
         run: |
-          sudo apt update
-          sudo apt install -y gcc g++ python3 openjdk-17-jdk
+          echo "❌ Skipping execution because $SOLUTION_COUNT solution files were changed. Only one is allowed."
+          exit 0
 
-      - name: Compile & Run C Tests
-        if: env.LANGUAGE == 'C'
+      - name: Install C Dependencies
+        if: env.RUN_C == '1' && env.SOLUTION_COUNT == '1'
         run: |
-          set -euo pipefail
-          gcc tests/test.c -o test_runner
-          echo "→ Running C tests…"
-          ./test_runner | tee test_results.log
+          echo "🔧 Installing C dependencies..."
+          sudo apt-get update
+          sudo apt-get install -y gcc
 
-      - name: Compile & Run C++ Tests
-        if: env.LANGUAGE == 'C++'
+      - name: Install C++ Dependencies
+        if: env.RUN_CPP == '1' && env.SOLUTION_COUNT == '1'
         run: |
-          set -euo pipefail
-          g++ tests/test.cpp -o test_runner_cpp
-          echo "→ Running C++ tests…"
-          ./test_runner_cpp | tee test_results.log
+          echo "🔧 Installing C++ dependencies..."
+          sudo apt-get update
+          sudo apt-get install -y g++
+
+      - name: Install Java Dependencies
+        if: env.RUN_JAVA == '1' && env.SOLUTION_COUNT == '1'
+        run: |
+          echo "🔧 Installing Java dependencies..."
+          sudo apt-get update
+          sudo apt-get install -y default-jdk
+
+      - name: Install Python Dependencies
+        if: env.RUN_PYTHON == '1' && env.SOLUTION_COUNT == '1'
+        run: |
+          echo "🔧 No external Python dependencies to install."
+
+      - name: Compile and Run C Tests
+        if: env.RUN_C == '1' && env.SOLUTION_COUNT == '1'
+        run: |
+          echo "🚀 Running C Test Cases..."
+          gcc -o tests/test tests/test.c solutions/solution.c
+          ./tests/test
+
+      - name: Compile and Run C++ Tests
+        if: env.RUN_CPP == '1' && env.SOLUTION_COUNT == '1'
+        run: |
+          echo "🚀 Running C++ Test Cases..."
+          g++ -std=c++11 -o tests/test tests/test.cpp solutions/solution.cpp
+          ./tests/test
 
       - name: Run Python Tests
-        if: env.LANGUAGE == 'Python'
+        if: env.RUN_PYTHON == '1' && env.SOLUTION_COUNT == '1'
         run: |
-          set -euo pipefail
-          echo "→ Running Python tests…"
-          python3 tests/test.py | tee test_results.log
+          echo "🚀 Running Python Test Cases..."
+          export PYTHONUNBUFFERED=1
+          export PYTHONPATH=$PWD
+          python3 tests/test.py > test_results.log
+          cat test_results.log
 
-      - name: Compile & Run Java Tests
-        if: env.LANGUAGE == 'Java'
+      - name: Compile and Run Java Tests
+        if: env.RUN_JAVA == '1' && env.SOLUTION_COUNT == '1'
         run: |
-          set -euo pipefail
-          javac tests/Test.java
-          echo "→ Running Java tests…"
-          java -cp . tests.Test | tee test_results.log
+          echo "🚀 Running Java Test Cases..."
+          javac -d . solutions/Solution.java tests/Test.java
+          java tests.Test
 
-      - name: Upload Test Results
-        if: always()
+      - name: Upload Test Results (Python only)
+        if: env.SOLUTION_COUNT == '1' && env.RUN_PYTHON == '1'
         uses: actions/upload-artifact@v4
         with:
           name: test-results
