@@ -6,17 +6,17 @@ int cmp(const void* a, const void* b) {
 }
 
 int* smallerNumbersThanCurrent(int* nums, int numsSize, int* returnSize) {
-    // Allocate result array
+    
     int* res = malloc(numsSize * sizeof(int));
     *returnSize = numsSize;
     
-    // Create sorted copy
+    
     int* sorted = malloc(numsSize * sizeof(int));
     memcpy(sorted, nums, numsSize * sizeof(int));
     qsort(sorted, numsSize, sizeof(int), cmp);
     
-    // Map number to count of smaller numbers
-    int* countMap = calloc(101, sizeof(int)); // Assuming nums[i] in [0, 100] per problem constraints
+   
+    int* countMap = calloc(101, sizeof(int)); 
     int count = 0;
     for (int i = 0; i < numsSize; i++) {
         if (i > 0 && sorted[i] != sorted[i-1]) {
@@ -25,7 +25,7 @@ int* smallerNumbersThanCurrent(int* nums, int numsSize, int* returnSize) {
         count++;
     }
     
-    // Map original numbers to counts
+  
     for (int i = 0; i < numsSize; i++) {
         res[i] = countMap[nums[i]];
     }
