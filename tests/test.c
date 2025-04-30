@@ -3,7 +3,7 @@
 #include <limits.h>
 #include <time.h>
 
-// Declare the solution function (defined in solutions/Solution.c)
+// Just declare the function here — do NOT include Solution.c
 int* smallerNumbersThanCurrent(int* nums, int numsSize, int* returnSize);
 
 static int any_failed = 0;
@@ -19,11 +19,16 @@ void testCase(int* nums, int n, int* expected) {
         if (out[i] != expected[i]) passed = 0;
     }
 
-    // Always print pass/fail, timing, expected and actual
+    // Print result of the test (PASS/FAIL) along with timing
     printf("%s (%ldms)\n", passed ? "PASS" : "FAIL", (end - start));
+    
+    // Print expected output
     printf("  Expected: ");
     for (int i = 0; i < n; i++) printf("%d ", expected[i]);
-    printf("\n  Got:      ");
+    printf("\n");
+
+    // Print actual output
+    printf("  Got:      ");
     for (int i = 0; i < n; i++) printf("%d ", out[i]);
     printf("\n\n");
 
