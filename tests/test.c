@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <limits.h>
 #include <time.h>
-#include "../solutions/solution.c"  // Ensure the solution function is defined here
+
 
 // Function to test the solution with different test cases
 void testCase(int* nums, int n, int* expected) {
