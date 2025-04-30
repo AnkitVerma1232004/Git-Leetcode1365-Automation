@@ -3,7 +3,7 @@
 int* smallerNumbersThanCurrent(int* nums, int numsSize, int* returnSize) {
     int* res = malloc(numsSize * sizeof(int));
     for (int i = 0; i < numsSize; i++) {
-        int count = 1;
+        int count = 0;
         for (int j = 0; j < numsSize; j++) {
             if (nums[j] < nums[i]) {
                 count++;
