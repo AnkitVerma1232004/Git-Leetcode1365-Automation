@@ -1,5 +1,5 @@
 #include <stdlib.h>
-//
+
 int* smallerNumbersThanCurrent(int* nums, int numsSize, int* returnSize) {
     int* res = malloc(numsSize * sizeof(int));
     for (int i = 0; i < numsSize; i++) {
