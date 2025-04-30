@@ -11,80 +11,76 @@ on:
       - 'tests/**'
 
 jobs:
-  detect-and-test:
+  run-tests:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v3
-
-      - name: Set up Java
-        if: contains(github.event.head_commit.message, '.java')
-        uses: actions/setup-java@v3
         with:
-          java-version: '17'
-          distribution: 'temurin'
+          fetch-depth: 2
 
-      - name: Set up Python
-        if: contains(github.event.head_commit.message, '.py')
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
+      - name: Detect changed solution file
+        id: detect
+        run: |
+          BASE=${{ github.event.before }}
+          if [ -z "$BASE" ] || ! git cat-file -e "$BASE"^{commit}; then
+            BASE=$(git rev-parse HEAD~1)
+          fi
+
+          # list changed files under solutions/
+          CHANGED=$(git diff --name-only $BASE $GITHUB_SHA | grep '^solutions/' || true)
+          echo "Changed solution files: $CHANGED"
+          echo "CHANGED_FILES=$CHANGED" >> $GITHUB_ENV
+
+      - name: Determine LANGUAGE
+        id: lang
+        run: |
+          for f in ${{ env.CHANGED_FILES }}; do
+            case "$f" in
+              *.c)    echo "LANGUAGE=C"      >> $GITHUB_ENV && break ;;
+              *.cpp)  echo "LANGUAGE=CPP"    >> $GITHUB_ENV && break ;;
+              *.java) echo "LANGUAGE=JAVA"   >> $GITHUB_ENV && break ;;
+              *.py)   echo "LANGUAGE=PYTHON" >> $GITHUB_ENV && break ;;
+            esac
+          done
+          echo "→ Detected LANGUAGE=${{ env.LANGUAGE }}"
+
+      - name: Install all runtimes
+        run: |
+          sudo apt update
+          sudo apt install -y gcc g++ python3 openjdk-17-jdk
+
+      - name: Compile & Run C Tests
+        if: env.LANGUAGE == 'C'
+        run: |
+          set -euo pipefail
+          gcc solutions/Solution.c tests/test.c -o test_c
+          echo "→ Running C tests..."
+          ./test_c | tee c_test_output.txt
+
+      - name: Compile & Run C++ Tests
+        if: env.LANGUAGE == 'CPP'
+        run: |
+          set -euo pipefail
+          g++ solutions/Solution.cpp tests/test.cpp -o test_cpp
+          echo "→ Running C++ tests..."
+          ./test_cpp | tee cpp_test_output.txt
+
+      - name: Compile & Run Java Tests
+        if: env.LANGUAGE == 'JAVA'
+        run: |
+          set -euo pipefail
+          javac solutions/Solution.java tests/Test.java
+          echo "→ Running Java tests..."
+          java -cp . tests.Test | tee java_test_output.txt
 
       - name: Run Python Tests
-        if: contains(github.event.head_commit.message, '.py')
+        if: env.LANGUAGE == 'PYTHON'
         run: |
-          python tests/test.py > python_test_output.txt
-          cat python_test_output.txt
-          if grep -q "failed" python_test_output.txt; then
-            echo "One or more Python test cases failed."
-            exit 1
-          fi
-
-      - name: Compile Java Code
-        if: contains(github.event.head_commit.message, '.java')
-        run: |
-          javac solutions/Solution.java tests/Test.java
-
-      - name: Run Java Tests
-        if: contains(github.event.head_commit.message, '.java')
-        run: |
-          java -cp . tests.Test > java_test_output.txt
-          cat java_test_output.txt
-          if grep -q "failed" java_test_output.txt; then
-            echo "One or more Java test cases failed."
-            exit 1
-          fi
-
-      - name: Compile C Code
-        if: contains(github.event.head_commit.message, '.c')
-        run: |
-          gcc solutions/Solution.c tests/test.c -o test_c
-
-      - name: Run C Tests
-        if: contains(github.event.head_commit.message, '.c')
-        run: |
-          ./test_c > c_test_output.txt
-          cat c_test_output.txt
-          if grep -q "failed" c_test_output.txt; then
-            echo "One or more C test cases failed."
-            exit 1
-          fi
-
-      - name: Compile C++ Code
-        if: contains(github.event.head_commit.message, '.cpp')
-        run: |
-          g++ solutions/Solution.cpp tests/test.cpp -o test_cpp
-
-      - name: Run C++ Tests
-        if: contains(github.event.head_commit.message, '.cpp')
-        run: |
-          ./test_cpp > cpp_test_output.txt
-          cat cpp_test_output.txt
-          if grep -q "failed" cpp_test_output.txt; then
-            echo "One or more C++ test cases failed."
-            exit 1
-          fi
+          set -euo pipefail
+          echo "→ Running Python tests..."
+          python3 tests/test.py | tee python_test_output.txt
 
       - name: Upload Test Results
         if: always()
@@ -92,4 +88,4 @@ jobs:
         with:
           name: test-results
           path: |
-            *.txt
+            *_test_output.txt
