@@ -13,9 +13,8 @@ on:
 jobs:
   run-tests:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v3
         with:
           fetch-depth: 2
@@ -40,12 +39,20 @@ jobs:
               *.py)   echo "LANGUAGE=PY"   >> $GITHUB_ENV && break ;;
             esac
           done
-          echo "Detected $LANGUAGE"
+          echo "→ Detected LANGUAGE=${{ env.LANGUAGE }}"
 
-      - name: Install runtimes
-        run: |
-          sudo apt update
-          sudo apt install -y gcc g++ python3 openjdk-17-jdk
+      - name: Setup Java (only if needed)
+        if: env.LANGUAGE == 'JAVA'
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Python (only if needed)
+        if: env.LANGUAGE == 'PY'
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
 
       - name: Compile & Run C Tests
         if: env.LANGUAGE == 'C'
@@ -80,4 +87,7 @@ jobs:
         with:
           name: test-results
           path: |
-            *_test_output.txt
+            c_test_output.txt
+            cpp_test_output.txt
+            java_test_output.txt
+            python_test_output.txt
