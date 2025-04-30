@@ -35,6 +35,7 @@ public class Test {
             System.out.println("PASS (" + (end - start) + "ms)");
         } else {
             System.out.println("FAIL (" + (end - start) + "ms)");
+            System.out.println("  Input:    " + Arrays.toString(nums));
             System.out.println("  Expected: " + Arrays.toString(expected));
             System.out.println("  Got:      " + Arrays.toString(out));
         }
