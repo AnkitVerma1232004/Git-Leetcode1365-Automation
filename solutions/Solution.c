@@ -1,7 +1,7 @@
 /**
  * Note: The returned array must be malloced, assume caller calls free().
  */
-//yo
+
 #include <stdlib.h>
 
 int* smallerNumbersThanCurrent(int* nums, int numsSize, int* returnSize) {
