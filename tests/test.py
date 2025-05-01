@@ -7,7 +7,10 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from solutions.Solution import Solution
 
+failed = False  # Flag to track if any test failed
+
 def test_case(nums, expected):
+    global failed
     start = time.time()
     out = Solution().smallerNumbersThanCurrent(nums)
     elapsed = (time.time() - start) * 1000
@@ -18,6 +21,7 @@ def test_case(nums, expected):
         print("  Input:   ", nums)
         print("  Expected:", expected)
         print("  Got:     ", out)
+        failed = True
 
 if __name__ == "__main__":
     test_case([8,1,2,2,3],     [4,0,1,1,3])
@@ -31,3 +35,6 @@ if __name__ == "__main__":
     test_case([10,10,10,10],   [0,0,0,0])
     test_case([0,2,4,6,8,10],  [0,1,2,3,4,5])
     test_case([-1,-2,-3,-4],   [3,2,1,0])
+
+    if failed:
+        sys.exit(1)
