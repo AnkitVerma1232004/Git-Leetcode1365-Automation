@@ -30,6 +30,7 @@ void testCase(const vector<int>& nums, const vector<int>& expected) {
 
 int main() {
     testCase({8,1,2,2,3},     {4,0,1,1,3});
+    testCase({1,2,2,3,4},     {0,1,1,3,4});
     testCase({6,5,4,8},       {2,1,0,3});
     testCase({7,7,7,7},       {0,0,0,0});
     testCase({1},             {0});
