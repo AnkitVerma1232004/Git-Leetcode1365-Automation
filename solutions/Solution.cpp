@@ -7,7 +7,7 @@ public:
         int n = nums.size();
         vector<int> res(n);
         for (int i = 0; i < n; i++) {
-            int cnt = 0;
+            int cnt = 1;
             for (int j = 0; j < n; j++) {
                 if (nums[j] < nums[i]) cnt++;
             }
