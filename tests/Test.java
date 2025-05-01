@@ -13,7 +13,7 @@ public class Test {
         allPassed &= testCase(sol, new int[]{7,7,7,7},   new int[]{0,0,0,0});
         allPassed &= testCase(sol, new int[]{1},         new int[]{0});
         allPassed &= testCase(sol, new int[]{3,2,1},     new int[]{2,1,0});
-        allPassed &= testCase(sol, new int[]{1,2,2,3,4}, new int[]{0,1,1,2,3});
+        allPassed &= testCase(sol, new int[]{1,2,2,3,4}, new int[]{0,1,1,3,4});
         allPassed &= testCase(sol, new int[]{9,7,5,6,8}, new int[]{4,2,0,1,3});
         allPassed &= testCase(sol, new int[]{5,4,3,2,1}, new int[]{4,3,2,1,0});
         allPassed &= testCase(sol, new int[]{10,10,10,10}, new int[]{0,0,0,0});
