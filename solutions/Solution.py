@@ -1,3 +1,4 @@
+#python file
 class Solution:
     def smallerNumbersThanCurrent(self, nums):
         res = []
